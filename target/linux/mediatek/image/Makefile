@@ -37,6 +37,7 @@ define Build/sysupgrade-bpi-r2-sd
   dd bs="1024" if="$(STAGING_DIR_IMAGE)/mtk-bpi-r2-uboot.bin" of="$@" seek="320"
   dd bs="1024" if="$(IMAGE_KERNEL)" of="$@" seek="2048"
   dd bs="1024" if="$(IMAGE_ROOTFS)" of="$@" seek="67584"
+  printf "%b" "\x85\x19\x03\x20\x0c\x00\x00\x00\xb1\xb0\x1e\xe4\xff\xff" >> "$@" #append jffs header
 endef
 
 define Build/sysupgrade-bpi-r2-emmc
@@ -44,6 +45,7 @@ define Build/sysupgrade-bpi-r2-emmc
   dd bs="1024" if="$(STAGING_DIR_IMAGE)/mtk-bpi-r2-uboot.bin" of="$@" seek="320"
   dd bs="1024" if="$(IMAGE_KERNEL)" of="$@" seek="2048"
   dd bs="1024" if="$(IMAGE_ROOTFS)" of="$@" seek="67584"
+  printf "%b" "\x85\x19\x03\x20\x0c\x00\x00\x00\xb1\xb0\x1e\xe4\xff\xff" >> "$@" #append jffs header
 endef
 
 # default all platform image(fit) build 
@@ -56,8 +58,8 @@ define Device/Default
   IMAGE/sysupgrade.bin := append-kernel | append-rootfs | pad-rootfs | append-metadata 
 ifeq ($(SUBTARGET),mt7623)
   KERNEL_NAME := zImage
-  KERNEL := kernel-bin | append-dtb | uImage none
-  KERNEL_INITRAMFS := kernel-bin | append-dtb | uImage none
+  KERNEL := kernel-bin | append-dtb | uImage none | append-metadata
+  KERNEL_INITRAMFS := kernel-bin | append-dtb | uImage none | append-metadata
 endif
 ifeq ($(SUBTARGET),mt7622)
   KERNEL_NAME := Image

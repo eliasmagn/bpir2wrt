@@ -49,3 +49,18 @@ define KernelPackage/crypto-hw-mtk/description
 endef
 
 $(eval $(call KernelPackage,crypto-hw-mtk))
+
+define KernelPackage/nat-hw-mtk
+  TITLE:= MediaTek's hardware NAT module
+  DEPENDS:=@TARGET_mediatek
+  KCONFIG:= \
+	CONFIG_NET_MEDIATEK_HNAT=y
+  FILES:=$(LINUX_DIR)/drivers/net/ethernet/mediatek/mtk_hnat/mtkhnat.ko
+  AUTOLOAD:=$(call AutoLoad,90,mtkhnat)
+endef
+
+define KernelPackage/nat-hw-mtk/description
+  MediaTek's hardware NAT driver.
+endef
+
+$(eval $(call KernelPackage,nat-hw-mtk))
