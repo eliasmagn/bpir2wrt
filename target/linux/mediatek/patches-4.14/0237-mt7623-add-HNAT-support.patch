@@ -24,11 +24,9 @@ Subject: [PATCH] [HNAT] applied full Patch from hnat-branch
  create mode 100644 drivers/net/ethernet/mediatek/mtk_hnat/hnat_nf_hook.c
  create mode 100644 drivers/net/ethernet/mediatek/mtk_hnat/nf_hnat_mtk.h
 
-diff --git a/arch/arm/boot/dts/mt7623.dtsi b/arch/arm/boot/dts/mt7623.dtsi
-index 44831a813a48f..1633d19564ca8 100644
 --- a/arch/arm/boot/dts/mt7623.dtsi
 +++ b/arch/arm/boot/dts/mt7623.dtsi
-@@ -1207,6 +1207,15 @@
+@@ -940,6 +940,15 @@
  		status = "disabled";
  	};
  
@@ -44,8 +42,6 @@ index 44831a813a48f..1633d19564ca8 100644
  	crypto: crypto@1b240000 {
  		compatible = "mediatek,mt7623-crypto";
  		reg = <0 0x1b240000 0 0x20000>;
-diff --git a/drivers/net/ethernet/mediatek/Kconfig b/drivers/net/ethernet/mediatek/Kconfig
-index f9149d2a46940..314c6fe670f81 100644
 --- a/drivers/net/ethernet/mediatek/Kconfig
 +++ b/drivers/net/ethernet/mediatek/Kconfig
 @@ -14,4 +14,11 @@ config NET_MEDIATEK_SOC
@@ -60,8 +56,6 @@ index f9149d2a46940..314c6fe670f81 100644
 +	  MediaTek MT2701/MT7623 chipset family.
 +
  endif #NET_VENDOR_MEDIATEK
-diff --git a/drivers/net/ethernet/mediatek/Makefile b/drivers/net/ethernet/mediatek/Makefile
-index aa3f1c8ccd4ab..355c928f4700e 100644
 --- a/drivers/net/ethernet/mediatek/Makefile
 +++ b/drivers/net/ethernet/mediatek/Makefile
 @@ -3,3 +3,4 @@
@@ -69,8 +63,6 @@ index aa3f1c8ccd4ab..355c928f4700e 100644
  
  obj-$(CONFIG_NET_MEDIATEK_SOC)			+= mtk_eth_soc.o
 +obj-$(CONFIG_NET_MEDIATEK_HNAT)			+= mtk_hnat/
-diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
-index e6b6596e6a4a9..de4969cc672c4 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
 @@ -24,6 +24,10 @@
@@ -84,7 +76,7 @@ index e6b6596e6a4a9..de4969cc672c4 100644
  #include "mtk_eth_soc.h"
  
  static int mtk_msg_level = -1;
-@@ -699,6 +703,11 @@ static int mtk_tx_map(struct sk_buff *skb, struct net_device *dev,
+@@ -699,6 +703,11 @@ static int mtk_tx_map(struct sk_buff *sk
  		return -ENOMEM;
  
  	/* set the forward port */
@@ -96,7 +88,7 @@ index e6b6596e6a4a9..de4969cc672c4 100644
  	fport = (mac->id + 1) << TX_DMA_FPORT_SHIFT;
  	txd4 |= fport;
  
-@@ -1063,6 +1072,10 @@ static int mtk_poll_rx(struct napi_struct *napi, int budget,
+@@ -1063,6 +1072,10 @@ static int mtk_poll_rx(struct napi_struc
  		    RX_DMA_VID(trxd.rxd3))
  			__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q),
  					       RX_DMA_VID(trxd.rxd3));
@@ -107,7 +99,7 @@ index e6b6596e6a4a9..de4969cc672c4 100644
  		skb_record_rx_queue(skb, 0);
  		napi_gro_receive(napi, skb);
  
-@@ -2000,6 +2013,12 @@ static int mtk_hw_init(struct mtk_eth *eth)
+@@ -2002,6 +2015,12 @@ static int mtk_hw_init(struct mtk_eth *e
  	val = mtk_r32(eth, MTK_CDMP_IG_CTRL);
  	mtk_w32(eth, val | MTK_CDMP_STAG_EN, MTK_CDMP_IG_CTRL);
  
@@ -120,7 +112,7 @@ index e6b6596e6a4a9..de4969cc672c4 100644
  	/* Enable RX VLan Offloading */
  	if (MTK_HW_FEATURES & NETIF_F_HW_VLAN_CTAG_RX)
  		mtk_w32(eth, 1, MTK_CDMP_EG_CTRL);
-@@ -2033,6 +2052,9 @@ static int mtk_hw_init(struct mtk_eth *eth)
+@@ -2035,6 +2054,9 @@ static int mtk_hw_init(struct mtk_eth *e
  		/* Enable RX checksum */
  		val |= MTK_GDMA_ICS_EN | MTK_GDMA_TCS_EN | MTK_GDMA_UCS_EN;
  
@@ -130,9 +122,6 @@ index e6b6596e6a4a9..de4969cc672c4 100644
  		/* setup the mac dma */
  		mtk_w32(eth, val, MTK_GDMA_FWD_CFG(i));
  	}
-diff --git a/drivers/net/ethernet/mediatek/mtk_hnat/Makefile b/drivers/net/ethernet/mediatek/mtk_hnat/Makefile
-new file mode 100644
-index 0000000000000..e052abcd43020
 --- /dev/null
 +++ b/drivers/net/ethernet/mediatek/mtk_hnat/Makefile
 @@ -0,0 +1,4 @@
@@ -140,9 +129,6 @@ index 0000000000000..e052abcd43020
 +
 +obj-$(CONFIG_NET_MEDIATEK_HNAT)         += mtkhnat.o
 +mtkhnat-objs := hnat.o hnat_nf_hook.o hnat_debugfs.o
-diff --git a/drivers/net/ethernet/mediatek/mtk_hnat/hnat.c b/drivers/net/ethernet/mediatek/mtk_hnat/hnat.c
-new file mode 100644
-index 0000000000000..22a822737934f
 --- /dev/null
 +++ b/drivers/net/ethernet/mediatek/mtk_hnat/hnat.c
 @@ -0,0 +1,329 @@
@@ -475,9 +461,6 @@ index 0000000000000..22a822737934f
 +MODULE_AUTHOR("Sean Wang <sean.wang@mediatek.com>");
 +MODULE_AUTHOR("John Crispin <john@phrozen.org>");
 +MODULE_DESCRIPTION("Mediatek Hardware NAT");
-diff --git a/drivers/net/ethernet/mediatek/mtk_hnat/hnat.h b/drivers/net/ethernet/mediatek/mtk_hnat/hnat.h
-new file mode 100644
-index 0000000000000..336ebb34c325d
 --- /dev/null
 +++ b/drivers/net/ethernet/mediatek/mtk_hnat/hnat.h
 @@ -0,0 +1,427 @@
@@ -908,9 +891,6 @@ index 0000000000000..336ebb34c325d
 +extern int hnat_register_nf_hooks(struct net *net);
 +extern void hnat_unregister_nf_hooks(struct net *net);
 +
-diff --git a/drivers/net/ethernet/mediatek/mtk_hnat/hnat_debugfs.c b/drivers/net/ethernet/mediatek/mtk_hnat/hnat_debugfs.c
-new file mode 100644
-index 0000000000000..fbb0380ea0d92
 --- /dev/null
 +++ b/drivers/net/ethernet/mediatek/mtk_hnat/hnat_debugfs.c
 @@ -0,0 +1,489 @@
@@ -1403,9 +1383,6 @@ index 0000000000000..fbb0380ea0d92
 +	debugfs_remove_recursive(h->root);
 +	h->root = NULL;
 +}
-diff --git a/drivers/net/ethernet/mediatek/mtk_hnat/hnat_nf_hook.c b/drivers/net/ethernet/mediatek/mtk_hnat/hnat_nf_hook.c
-new file mode 100644
-index 0000000000000..0ce436ac00e61
 --- /dev/null
 +++ b/drivers/net/ethernet/mediatek/mtk_hnat/hnat_nf_hook.c
 @@ -0,0 +1,312 @@
@@ -1721,9 +1698,6 @@ index 0000000000000..0ce436ac00e61
 +	nf_unregister_net_hooks(net,mtk_hnat_nf_ops,
 +			    ARRAY_SIZE(mtk_hnat_nf_ops));
 +}
-diff --git a/drivers/net/ethernet/mediatek/mtk_hnat/nf_hnat_mtk.h b/drivers/net/ethernet/mediatek/mtk_hnat/nf_hnat_mtk.h
-new file mode 100644
-index 0000000000000..e19812840a840
 --- /dev/null
 +++ b/drivers/net/ethernet/mediatek/mtk_hnat/nf_hnat_mtk.h
 @@ -0,0 +1,44 @@
@@ -1771,8 +1745,6 @@ index 0000000000000..e19812840a840
 +
 +#endif
 +
-diff --git a/net/netfilter/nf_conntrack_proto_tcp.c b/net/netfilter/nf_conntrack_proto_tcp.c
-index 8febdd48b9f16..9bcc787f8abf3 100644
 --- a/net/netfilter/nf_conntrack_proto_tcp.c
 +++ b/net/netfilter/nf_conntrack_proto_tcp.c
 @@ -11,6 +11,7 @@
@@ -1781,9 +1753,9 @@ index 8febdd48b9f16..9bcc787f8abf3 100644
  #include <linux/module.h>
 +#include <linux/inetdevice.h>
  #include <linux/in.h>
- #include <net/ip.h>
  #include <linux/tcp.h>
-@@ -20,6 +21,7 @@
+ #include <linux/spinlock.h>
+@@ -19,6 +20,7 @@
  #include <net/ip6_checksum.h>
  #include <asm/unaligned.h>
  
@@ -1791,7 +1763,7 @@ index 8febdd48b9f16..9bcc787f8abf3 100644
  #include <net/tcp.h>
  
  #include <linux/netfilter.h>
-@@ -51,6 +53,11 @@ static int nf_ct_tcp_max_retrans __read_mostly = 3;
+@@ -53,6 +55,11 @@ static int nf_ct_tcp_max_retrans __read_
    /* FIXME: Examine ipfilter's timeouts and conntrack transitions more
       closely.  They're more complex. --RR */
  
@@ -1803,9 +1775,9 @@ index 8febdd48b9f16..9bcc787f8abf3 100644
  static const char *const tcp_conntrack_names[] = {
  	"NONE",
  	"SYN_SENT",
-@@ -506,6 +513,18 @@ static bool tcp_in_window(const struct nf_conn *ct,
- 	s32 receiver_offset;
- 	bool res, in_recv_win;
+@@ -514,6 +521,18 @@ static bool tcp_in_window(const struct n
+ 	if (nf_ct_tcp_no_window_check)
+ 		return true;
  
 +	if (net) {
 +		if ((net->ipv4.devconf_all && net->ipv4.devconf_dflt && net->ipv6.devconf_all) &&
